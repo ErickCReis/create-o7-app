@@ -95,7 +95,7 @@ fn generate_combinations(features: Vec<FeatureDetails>) -> Vec<HashSet<Feature>>
 				}
 			}
 		}
-		println!("{next:?}");
+		// println!("{next:?}");
 		last_step = next;
 	}
 	last_step
@@ -114,7 +114,7 @@ fn test() {
 			let possible =
 				usize::from(available_parallelism().unwrap_or(NonZeroUsize::new(1).unwrap()));
 
-			if std::env::var("CI").is_ok() {
+			if env::var("CI").is_ok() {
 				if possible == 1 {
 					1usize
 				} else {
@@ -127,10 +127,16 @@ fn test() {
 		combinations.len(),
 	);
 
-	println!(
-		"Testing {} combinations on {num_threads} threads",
-		combinations.len()
-	);
+	let total_features = combinations.len();
+
+	let index = env::var("INDEX")
+		.ok()
+		.and_then(|val| val.parse().ok())
+		.unwrap_or(1);
+	let total_runners = env::var("TOTAL_RUNNERS")
+		.ok()
+		.and_then(|val| val.parse().ok())
+		.unwrap_or(1);
 
 	let mut chunks = vec![vec![]; num_threads];
 	while !combinations.is_empty() {
@@ -147,19 +153,10 @@ fn test() {
 		let errors = Arc::new(RwLock::new(vec![]));
 		let thread_count = Arc::new(AtomicU16::new(0));
 
-		for chunk in chunks {
+		for (i, chunk) in chunks.iter().enumerate() {
 			thread_count.fetch_add(1, Ordering::SeqCst);
 			let errors = Arc::clone(&errors);
 			let thread_count = Arc::clone(&thread_count);
-
-			let index = env::var("INDEX")
-				.unwrap_or("1".to_string())
-				.parse::<usize>()
-				.unwrap();
-			let total_runners = env::var("TOTAL_RUNNERS")
-				.unwrap_or("1".to_string())
-				.parse::<usize>()
-				.unwrap();
 
 			let chunk_size = chunk.len() / total_runners;
 			let chuck_start = index * chunk_size;
@@ -167,8 +164,20 @@ fn test() {
 
 			let new_chunk = chunk[chuck_start..chunk_end].to_vec();
 
+			println!(
+				"Runner {index}/{total_runners}, Thread {}/{num_threads} with {} of {total_features} combinations: \n\n{}",
+				i + 1,
+				new_chunk.len(),
+				new_chunk.iter().map(|f| format!("{f:?}")).join("\n")
+			);
+
 			s.spawn(move || {
 				for features in new_chunk {
+					println!(
+						"Runner {index}/{total_runners}, Thread {}/{num_threads} running: {features:?}",
+						i + 1,
+					);
+
 					let features_debug = features.clone();
 					let input = make_input(features);
 					let dir = input.location.path.clone();

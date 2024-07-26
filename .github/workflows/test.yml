@@ -14,8 +14,7 @@ jobs:
       - name: Generate index
         id: generate
         run: | 
-          MAX_INDEX=$(( ${{ env.TOTAL_RUNNERS }} - 1 ))
-          INDEX_LIST=$(seq -s, 0 $MAX_INDEX)
+          INDEX_LIST=$(seq -s, 1 ${{ env.TOTAL_RUNNERS }})
           echo "indexes=[${INDEX_LIST}]" >> $GITHUB_OUTPUT
 
   test:
@@ -38,7 +37,7 @@ jobs:
       - name: Install pnpm
         run: npm i -g pnpm
       - name: Test
-        run: cargo test
+        run: cargo test -- --nocapture
         env:
           INDEX: ${{ matrix.index }}
           TOTAL_RUNNERS: ${{ env.TOTAL_RUNNERS }}
