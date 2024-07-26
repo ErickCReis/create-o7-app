@@ -2,16 +2,35 @@ name: Test
 on:
   pull_request:
 
+env:
+  TOTAL_RUNNERS: 5
+
 jobs:
+  generate-indexes:
+    runs-on: ubuntu-latest
+    outputs:
+      indexes: ${{ steps.generate.outputs.indexes }}
+    steps:
+      - name: Generate index
+        id: generate
+        run: | 
+          MAX_INDEX=$(( ${{ env.TOTAL_RUNNERS }} - 1 ))
+          INDEX_LIST=$(seq -s, 0 $MAX_INDEX)
+          echo "indexes=[${INDEX_LIST}]" >> $GITHUB_OUTPUT
+
   test:
     runs-on: ubuntu-latest
+    needs: generate-indexes
+    strategy:
+      matrix:
+        index: ${{ fromJSON(needs.generate-indexes.outputs.indexes) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
@@ -20,3 +39,7 @@ jobs:
         run: npm i -g pnpm
       - name: Test
         run: cargo test
+        env:
+          INDEX: ${{ matrix.index }}
+          TOTAL_RUNNERS: ${{ env.TOTAL_RUNNERS }}
+

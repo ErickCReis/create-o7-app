@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicU16, Ordering};
 use std::sync::{Arc, RwLock};
 use std::thread::available_parallelism;
 use std::time::Duration;
-use std::{fs, panic, thread};
+use std::{env, fs, panic, thread};
 
 use itertools::Itertools;
 
@@ -152,8 +152,23 @@ fn test() {
 			let errors = Arc::clone(&errors);
 			let thread_count = Arc::clone(&thread_count);
 
+			let index = env::var("INDEX")
+				.unwrap_or("1".to_string())
+				.parse::<usize>()
+				.unwrap();
+			let total_runners = env::var("TOTAL_RUNNERS")
+				.unwrap_or("1".to_string())
+				.parse::<usize>()
+				.unwrap();
+
+			let chunk_size = chunk.len() / total_runners;
+			let chuck_start = index * chunk_size;
+			let chunk_end = min((index + 1) * chunk_size, chunk.len());
+
+			let new_chunk = chunk[chuck_start..chunk_end].to_vec();
+
 			s.spawn(move || {
-				for features in chunk {
+				for features in new_chunk {
 					let features_debug = features.clone();
 					let input = make_input(features);
 					let dir = input.location.path.clone();
