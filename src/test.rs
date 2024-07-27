@@ -129,7 +129,7 @@ fn test() {
 
 	let total_features = combinations.len();
 
-	let index = env::var("INDEX")
+	let runner = env::var("RUNNER")
 		.ok()
 		.and_then(|val| val.parse().ok())
 		.unwrap_or(1);
@@ -159,13 +159,12 @@ fn test() {
 			let thread_count = Arc::clone(&thread_count);
 
 			let chunk_size = chunk.len() / total_runners;
-			let chuck_start = index * chunk_size;
-			let chunk_end = min((index + 1) * chunk_size, chunk.len());
-
+			let chuck_start = (runner - 1) * chunk_size;
+			let chunk_end = min(runner * chunk_size, chunk.len());
 			let new_chunk = chunk[chuck_start..chunk_end].to_vec();
 
 			println!(
-				"Runner {index}/{total_runners}, Thread {}/{num_threads} with {} of {total_features} combinations: \n\n{}",
+				"Runner {runner}/{total_runners}, Thread {}/{num_threads} with {} of {total_features} combinations:\n{}\n",
 				i + 1,
 				new_chunk.len(),
 				new_chunk.iter().map(|f| format!("{f:?}")).join("\n")
@@ -174,7 +173,7 @@ fn test() {
 			s.spawn(move || {
 				for features in new_chunk {
 					println!(
-						"Runner {index}/{total_runners}, Thread {}/{num_threads} running: {features:?}",
+						"Runner {runner}/{total_runners}, Thread {}/{num_threads} running: {features:?}",
 						i + 1,
 					);
 

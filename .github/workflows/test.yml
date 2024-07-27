@@ -6,23 +6,23 @@ env:
   TOTAL_RUNNERS: 5
 
 jobs:
-  generate-indexes:
+  generate-runners:
     runs-on: ubuntu-latest
     outputs:
-      indexes: ${{ steps.generate.outputs.indexes }}
+      runners: ${{ steps.generate.outputs.runners }}
     steps:
-      - name: Generate index
+      - name: Generate Runners
         id: generate
         run: | 
-          INDEX_LIST=$(seq -s, 1 ${{ env.TOTAL_RUNNERS }})
-          echo "indexes=[${INDEX_LIST}]" >> $GITHUB_OUTPUT
+          RUNNER_LIST=$(seq -s, 1 ${{ env.TOTAL_RUNNERS }})
+          echo "runners=[${RUNNER_LIST}]" >> $GITHUB_OUTPUT
 
   test:
     runs-on: ubuntu-latest
-    needs: generate-indexes
+    needs: generate-runners
     strategy:
       matrix:
-        index: ${{ fromJSON(needs.generate-indexes.outputs.indexes) }}
+        runners: ${{ fromJSON(needs.generate-runners.outputs.runners) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -39,6 +39,6 @@ jobs:
       - name: Test
         run: cargo test -- --nocapture
         env:
-          INDEX: ${{ matrix.index }}
+          RUNNER: ${{ matrix.runners }}
           TOTAL_RUNNERS: ${{ env.TOTAL_RUNNERS }}
 
